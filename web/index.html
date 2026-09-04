@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Temporary Online Clipboard</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .pin-input::-webkit-outer-spin-button,
+    .pin-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-300">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i data-lucide="clipboard-copy" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight tracking-tight">TempClipboard</h1>
+          <p class="text-xs text-slate-400">Self-destructing temporary clips</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button id="configBtn" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition" title="Supabase Settings">
+          <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+        <button id="themeToggle" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition" title="Toggle Theme">
+          <i data-lucide="sun" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-8">
+
+    <!-- Tab Switcher -->
+    <div class="grid grid-cols-2 p-1 bg-slate-800/80 rounded-2xl mb-8 border border-slate-700/50">
+      <button id="tabSend" class="py-2.5 px-4 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 bg-brand-600 text-white shadow-md">
+        <i data-lucide="send" class="w-4 h-4"></i>
+        <span>Send Clip</span>
+      </button>
+      <button id="tabReceive" class="py-2.5 px-4 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span>Receive Clip</span>
+      </button>
+    </div>
+
+    <!-- SENDER VIEW -->
+    <section id="sendView" class="space-y-6">
+      <!-- Input Mode Switcher -->
+      <div class="flex space-x-4 border-b border-slate-800 pb-3">
+        <button id="modeText" class="text-sm font-medium text-brand-500 border-b-2 border-brand-500 pb-1 flex items-center space-x-1.5">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>Text / Links</span>
+        </button>
+        <button id="modeFile" class="text-sm font-medium text-slate-400 hover:text-slate-200 pb-1 flex items-center space-x-1.5">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          <span>File / Image (Max 20MB)</span>
+        </button>
+      </div>
+
+      <!-- Text Input Form -->
+      <div id="textSection" class="space-y-4">
+        <textarea id="textContent" rows="7" placeholder="Paste your text, links, code snippets, or notes here..." class="w-full bg-slate-800/60 border border-slate-700 rounded-xl p-4 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono text-sm leading-relaxed"></textarea>
+      </div>
+
+      <!-- File Input Form -->
+      <div id="fileSection" class="hidden space-y-4">
+        <div id="dropZone" class="border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-2xl p-8 text-center cursor-pointer transition bg-slate-800/30 hover:bg-slate-800/60">
+          <input type="file" id="fileInput" class="hidden" />
+          <div class="flex flex-col items-center justify-center space-y-3">
+            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-brand-400">
+              <i data-lucide="file-up" class="w-6 h-6"></i>
+            </div>
+            <p class="font-medium text-sm text-slate-200">Click to upload or drag & drop</p>
+            <p class="text-xs text-slate-400">Images, PDFs, documents, zips up to 20MB</p>
+          </div>
+          <div id="filePreviewInfo" class="hidden mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between text-left text-sm bg-slate-800/80 p-3 rounded-lg">
+            <div class="flex items-center space-x-3 overflow-hidden">
+              <i data-lucide="file" class="w-5 h-5 text-brand-400 flex-shrink-0"></i>
+              <span id="fileNameDisplay" class="truncate font-medium"></span>
+            </div>
+            <span id="fileSizeDisplay" class="text-xs text-slate-400 ml-2"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="p-4 bg-slate-800/40 rounded-xl border border-slate-800 space-y-3">
+        <label class="flex items-center space-x-3 cursor-pointer select-none">
+          <input type="checkbox" id="burnOnRead" class="w-4 h-4 rounded text-brand-600 bg-slate-700 border-slate-600 focus:ring-brand-500">
+          <div class="flex-1">
+            <span class="text-sm font-medium flex items-center text-amber-300">
+              <i data-lucide="flame" class="w-4 h-4 mr-1"></i> Burn on Read
+            </span>
+            <p class="text-xs text-slate-400">Delete automatically immediately after first successful retrieval</p>
+          </div>
+        </label>
+        <div class="text-xs text-slate-500 flex items-center">
+          <i data-lucide="clock" class="w-3.5 h-3.5 mr-1"></i> All clips expire automatically in 10 minutes.
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button id="createClipBtn" class="w-full py-3.5 px-6 rounded-xl font-semibold bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white shadow-lg shadow-brand-500/25 transition transform active:scale-[0.99] flex items-center justify-center space-x-2">
+        <i data-lucide="share-2" class="w-5 h-5"></i>
+        <span>Create Temporary Clip</span>
+      </button>
+
+      <!-- Clip Created Result Modal/Card -->
+      <div id="clipResultCard" class="hidden mt-6 p-6 bg-slate-800/90 border border-brand-500/30 rounded-2xl shadow-xl space-y-6 animate-fade-in">
+        <div class="text-center space-y-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Clip Ready for Transfer</span>
+          <h2 class="text-2xl font-bold">Share Your 4-Digit Code</h2>
+        </div>
+
+        <div class="flex flex-col items-center justify-center space-y-4">
+          <!-- 4-Digit PIN Display -->
+          <div class="flex items-center space-x-2 bg-slate-900 px-6 py-4 rounded-2xl border border-slate-700 cursor-pointer group" id="copyPinBtn" title="Click to copy code">
+            <span id="pinDisplay" class="font-mono text-4xl tracking-widest font-extrabold text-brand-400 group-hover:scale-105 transition transform">0000</span>
+            <i data-lucide="copy" class="w-5 h-5 text-slate-400 ml-2 group-hover:text-white"></i>
+          </div>
+
+          <!-- Countdown Timer -->
+          <div class="flex items-center space-x-2 text-sm text-amber-400 bg-amber-950/40 border border-amber-800/40 px-3 py-1.5 rounded-full">
+            <i data-lucide="timer" class="w-4 h-4 animate-spin-slow"></i>
+            <span>Expires in: <strong id="countdownTimer" class="font-mono">10:00</strong></span>
+          </div>
+
+          <!-- QR Code Container -->
+          <div class="p-4 bg-white rounded-2xl shadow-md flex items-center justify-center" id="qrcode"></div>
+          <p class="text-xs text-slate-400 text-center">Scan with any mobile camera or visit with <code id="linkUrlDisplay" class="text-brand-400">?code=...</code></p>
+        </div>
+
+        <button id="resetSendBtn" class="w-full py-2.5 px-4 rounded-xl text-sm font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 transition">
+          Create Another Clip
+        </button>
+      </div>
+    </section>
+
+    <!-- RECEIVER VIEW -->
+    <section id="receiveView" class="hidden space-y-6">
+      <div class="p-6 bg-slate-800/50 border border-slate-700/60 rounded-2xl shadow-lg text-center space-y-6">
+        <div class="space-y-1">
+          <h2 class="text-xl font-bold">Enter 4-Digit PIN</h2>
+          <p class="text-xs text-slate-400">Retrieve text or files sent from another device</p>
+        </div>
+
+        <!-- 4-box PIN Inputs -->
+        <div class="flex justify-center space-x-3">
+          <input type="text" maxlength="1" inputmode="numeric" class="pin-input w-14 h-16 text-center font-mono text-2xl font-bold bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-brand-400" id="pin0">
+          <input type="text" maxlength="1" inputmode="numeric" class="pin-input w-14 h-16 text-center font-mono text-2xl font-bold bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-brand-400" id="pin1">
+          <input type="text" maxlength="1" inputmode="numeric" class="pin-input w-14 h-16 text-center font-mono text-2xl font-bold bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-brand-400" id="pin2">
+          <input type="text" maxlength="1" inputmode="numeric" class="pin-input w-14 h-16 text-center font-mono text-2xl font-bold bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-brand-400" id="pin3">
+        </div>
+
+        <button id="fetchClipBtn" class="w-full py-3 px-6 rounded-xl font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-lg transition flex items-center justify-center space-x-2">
+          <i data-lucide="search" class="w-5 h-5"></i>
+          <span>Retrieve Content</span>
+        </button>
+      </div>
+
+      <!-- Received Content Card -->
+      <div id="receivedContentCard" class="hidden p-6 bg-slate-800/90 border border-slate-700 rounded-2xl shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+          <div class="flex items-center space-x-2">
+            <span id="contentTypeBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300">Text</span>
+            <span id="burnBadge" class="hidden text-xs font-semibold px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 flex items-center">
+              <i data-lucide="flame" class="w-3 h-3 mr-1"></i> Burned
+            </span>
+          </div>
+          <span id="expiryDisplay" class="text-xs text-slate-400"></span>
+        </div>
+
+        <!-- Text Display -->
+        <div id="receivedTextContainer" class="space-y-3">
+          <pre id="receivedText" class="p-4 bg-slate-900 rounded-xl text-sm font-mono whitespace-pre-wrap break-words border border-slate-700/60 max-h-80 overflow-y-auto"></pre>
+          <button id="copyContentBtn" class="py-2 px-4 rounded-xl text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-white flex items-center space-x-2 transition">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>Copy to Clipboard</span>
+          </button>
+        </div>
+
+        <!-- File / Image Display -->
+        <div id="receivedFileContainer" class="hidden space-y-4">
+          <div id="receivedImagePreview" class="hidden rounded-xl overflow-hidden border border-slate-700 bg-slate-900 max-h-72 flex items-center justify-center">
+            <img id="imagePreviewElement" src="" alt="Shared image preview" class="max-h-72 object-contain" />
+          </div>
+          <div class="p-4 bg-slate-900 rounded-xl flex items-center justify-between border border-slate-700/60">
+            <div class="flex items-center space-x-3 overflow-hidden">
+              <i data-lucide="file" class="w-6 h-6 text-brand-400 flex-shrink-0"></i>
+              <div>
+                <p id="receivedFileName" class="text-sm font-semibold truncate"></p>
+                <p id="receivedFileSize" class="text-xs text-slate-400"></p>
+              </div>
+            </div>
+            <a id="downloadFileBtn" href="#" target="_blank" download class="py-2 px-4 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center space-x-1.5 transition">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Download</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Settings / Supabase Config Modal -->
+  <div id="configModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+        <h3 class="font-bold text-lg">Supabase Configuration</h3>
+        <button id="closeConfigBtn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400">Connect to your Supabase project. These keys are stored safely in your browser's local storage.</p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Supabase Project URL</label>
+          <input type="text" id="supabaseUrlInput" placeholder="https://your-project.supabase.co" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Supabase Anon Key</label>
+          <input type="password" id="supabaseKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsIn..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+        </div>
+      </div>
+      <div class="pt-2 flex space-x-3">
+        <button id="saveConfigBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white transition">Save Settings</button>
+        <button id="demoModeBtn" class="py-2.5 px-4 rounded-xl text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 transition">Reset Demo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2 text-sm pointer-events-none">
+    <i id="toastIcon" data-lucide="check-circle" class="w-4 h-4"></i>
+    <span id="toastMsg">Notification</span>
+  </div>
+
+  <script>
+    // Lucide Icon Initializer
+    lucide.createIcons();
+
+    // -------------------------------------------------------------
+    // Configuration & State
+    // -------------------------------------------------------------
+    let supabaseClient = null;
+    let selectedFile = null;
+    let countdownInterval = null;
+    let currentInputMode = 'text'; // 'text' | 'file'
+
+    const DEFAULT_CONFIG = {
+      url: localStorage.getItem('TEMP_CLIP_SUPABASE_URL') || '',
+      key: localStorage.getItem('TEMP_CLIP_SUPABASE_KEY') || ''
+    };
+
+    function initSupabase() {
+      if (DEFAULT_CONFIG.url && DEFAULT_CONFIG.key) {
+        try {
+          supabaseClient = supabase.createClient(DEFAULT_CONFIG.url, DEFAULT_CONFIG.key);
+        } catch (e) {
+          console.error("Failed to init Supabase client:", e);
+        }
+      }
+    }
+    initSupabase();
+
+    // -------------------------------------------------------------
+    // Toast Notification System
+    // -------------------------------------------------------------
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toastMsg.textContent = message;
+      toast.className = `fixed bottom-6 right-6 z-50 transform transition-all duration-300 px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2 text-sm text-white ${
+        type === 'error' ? 'bg-red-600' : (type === 'warn' ? 'bg-amber-600' : 'bg-emerald-600')
+      }`;
+      toastIcon.setAttribute('data-lucide', type === 'error' ? 'alert-triangle' : 'check-circle');
+      lucide.createIcons();
+
+      toast.style.transform = 'translateY(0)';
+      toast.style.opacity = '1';
+
+      setTimeout(() => {
+        toast.style.transform = 'translateY(80px)';
+        toast.style.opacity = '0';
+      }, 3500);
+    }
+
+    // -------------------------------------------------------------
+    // Tab Navigation
+    // -------------------------------------------------------------
+    const tabSend = document.getElementById('tabSend');
+    const tabReceive = document.getElementById('tabReceive');
+    const sendView = document.getElementById('sendView');
+    const receiveView = document.getElementById('receiveView');
+
+    tabSend.addEventListener('click', () => switchTab('send'));
+    tabReceive.addEventListener('click', () => switchTab('receive'));
+
+    function switchTab(tab) {
+      if (tab === 'send') {
+        tabSend.className = "py-2.5 px-4 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 bg-brand-600 text-white shadow-md";
+        tabReceive.className = "py-2.5 px-4 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white";
+        sendView.classList.remove('hidden');
+        receiveView.classList.add('hidden');
+      } else {
+        tabReceive.className = "py-2.5 px-4 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 bg-brand-600 text-white shadow-md";
+        tabSend.className = "py-2.5 px-4 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white";
+        receiveView.classList.remove('hidden');
+        sendView.classList.add('hidden');
+        document.getElementById('pin0').focus();
+      }
+    }
+
+    // Input mode switch (Text vs File)
+    const modeText = document.getElementById('modeText');
+    const modeFile = document.getElementById('modeFile');
+    const textSection = document.getElementById('textSection');
+    const fileSection = document.getElementById('fileSection');
+
+    modeText.addEventListener('click', () => {
+      currentInputMode = 'text';
+      modeText.className = "text-sm font-medium text-brand-500 border-b-2 border-brand-500 pb-1 flex items-center space-x-1.5";
+      modeFile.className = "text-sm font-medium text-slate-400 hover:text-slate-200 pb-1 flex items-center space-x-1.5";
+      textSection.classList.remove('hidden');
+      fileSection.classList.add('hidden');
+    });
+
+    modeFile.addEventListener('click', () => {
+      currentInputMode = 'file';
+      modeFile.className = "text-sm font-medium text-brand-500 border-b-2 border-brand-500 pb-1 flex items-center space-x-1.5";
+      modeText.className = "text-sm font-medium text-slate-400 hover:text-slate-200 pb-1 flex items-center space-x-1.5";
+      fileSection.classList.remove('hidden');
+      textSection.classList.add('hidden');
+    });
+
+    // File Drag and Drop Handling
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const filePreviewInfo = document.getElementById('filePreviewInfo');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const fileSizeDisplay = document.getElementById('fileSizeDisplay');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleFileSelected(e.target.files[0]));
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-brand-500', 'bg-slate-800/80');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-brand-500', 'bg-slate-800/80');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-brand-500', 'bg-slate-800/80');
+      if (e.dataTransfer.files.length > 0) {
+        handleFileSelected(e.dataTransfer.files[0]);
+      }
+    });
+
+    function handleFileSelected(file) {
+      if (!file) return;
+      if (file.size > 20 * 1024 * 1024) {
+        showToast('File size exceeds 20MB limit', 'error');
+        return;
+      }
+      selectedFile = file;
+      fileNameDisplay.textContent = file.name;
+      fileSizeDisplay.textContent = formatBytes(file.size);
+      filePreviewInfo.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // -------------------------------------------------------------
+    // Code Generator & Sender Logic
+    // -------------------------------------------------------------
+    function generate4DigitCode() {
+      return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    const createClipBtn = document.getElementById('createClipBtn');
+    const clipResultCard = document.getElementById('clipResultCard');
+    const pinDisplay = document.getElementById('pinDisplay');
+    const copyPinBtn = document.getElementById('copyPinBtn');
+    const countdownTimer = document.getElementById('countdownTimer');
+    const linkUrlDisplay = document.getElementById('linkUrlDisplay');
+
+    createClipBtn.addEventListener('click', async () => {
+      const isText = currentInputMode === 'text';
+      const textContent = document.getElementById('textContent').value.trim();
+      const burnOnRead = document.getElementById('burnOnRead').checked;
+
+      if (isText && !textContent) {
+        showToast('Please enter text, code, or a link', 'warn');
+        return;
+      }
+      if (!isText && !selectedFile) {
+        showToast('Please select a file to upload', 'warn');
+        return;
+      }
+
+      createClipBtn.disabled = true;
+      createClipBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>Uploading & Generating PIN...</span>`;
+      lucide.createIcons();
+
+      const code = generate4DigitCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+      try {
+        let filePath = null;
+        let fileName = null;
+        let fileSize = null;
+        let type = 'text';
+
+        // Check if Supabase client configured; otherwise use in-memory demo storage
+        if (supabaseClient) {
+          if (!isText && selectedFile) {
+            type = selectedFile.type.startsWith('image/') ? 'image' : 'file';
+            fileName = selectedFile.name;
+            fileSize = selectedFile.size;
+            filePath = `${code}/${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+            const { error: uploadError } = await supabaseClient.storage
+              .from('temporary_clips')
+              .upload(filePath, selectedFile, { cacheControl: '3600', upsert: true });
+
+            if (uploadError) throw uploadError;
+          }
+
+          const { error: insertError } = await supabaseClient
+            .from('clipboard')
+            .insert({
+              code,
+              content: isText ? textContent : null,
+              file_path: filePath,
+              file_name: fileName,
+              file_size: fileSize,
+              type,
+              burn_on_read: burnOnRead,
+              expires_at: expiresAt
+            });
+
+          if (insertError) throw insertError;
+        } else {
+          // Demo fallback storage in localStorage
+          saveLocalDemoClip({
+            code,
+            content: isText ? textContent : null,
+            file_name: selectedFile ? selectedFile.name : null,
+            file_size: selectedFile ? selectedFile.size : null,
+            type: !isText ? (selectedFile.type.startsWith('image/') ? 'image' : 'file') : 'text',
+            burn_on_read: burnOnRead,
+            expires_at: expiresAt
+          });
+        }
+
+        // Display Result Card
+        pinDisplay.textContent = code;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('code', code);
+        linkUrlDisplay.textContent = `?code=${code}`;
+
+        // Generate QR code
+        const qrContainer = document.getElementById('qrcode');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: currentUrl.toString(),
+          width: 140,
+          height: 140,
+          colorDark: "#0f172a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+
+        startCountdown(10 * 60);
+        clipResultCard.classList.remove('hidden');
+        showToast('Clip created! PIN is active for 10 minutes.', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast(`Failed: ${err.message || 'Error creating clip'}`, 'error');
+      } finally {
+        createClipBtn.disabled = false;
+        createClipBtn.innerHTML = `<i data-lucide="share-2" class="w-5 h-5"></i><span>Create Temporary Clip</span>`;
+        lucide.createIcons();
+      }
+    });
+
+    copyPinBtn.addEventListener('click', () => {
+      const pin = pinDisplay.textContent;
+      navigator.clipboard.writeText(pin);
+      showToast(`PIN ${pin} copied to clipboard!`, 'success');
+    });
+
+    function startCountdown(secondsLeft) {
+      clearInterval(countdownInterval);
+      updateTimerDisplay(secondsLeft);
+
+      countdownInterval = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+          clearInterval(countdownInterval);
+          countdownTimer.textContent = '00:00 (Expired)';
+          showToast('This clip has expired.', 'warn');
+        } else {
+          updateTimerDisplay(secondsLeft);
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay(seconds) {
+      const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const s = (seconds % 60).toString().padStart(2, '0');
+      countdownTimer.textContent = `${m}:${s}`;
+    }
+
+    document.getElementById('resetSendBtn').addEventListener('click', () => {
+      document.getElementById('textContent').value = '';
+      selectedFile = null;
+      filePreviewInfo.classList.add('hidden');
+      fileInput.value = '';
+      clipResultCard.classList.add('hidden');
+      clearInterval(countdownInterval);
+    });
+
+    // -------------------------------------------------------------
+    // Receiver Logic (4-box PIN auto-advance, paste, fetch)
+    // -------------------------------------------------------------
+    const pinInputs = [
+      document.getElementById('pin0'),
+      document.getElementById('pin1'),
+      document.getElementById('pin2'),
+      document.getElementById('pin3')
+    ];
+
+    pinInputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = val ? val[val.length - 1] : '';
+
+        if (e.target.value && index < 3) {
+          pinInputs[index + 1].focus();
+        }
+        checkAutoSubmit();
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !input.value && index > 0) {
+          pinInputs[index - 1].focus();
+        }
+      });
+
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+        if (pasted.length >= 4) {
+          for (let i = 0; i < 4; i++) {
+            pinInputs[i].value = pasted[i];
+          }
+          pinInputs[3].focus();
+          checkAutoSubmit();
+        }
+      });
+    });
+
+    function getEnteredPin() {
+      return pinInputs.map(input => input.value).join('');
+    }
+
+    function checkAutoSubmit() {
+      const code = getEnteredPin();
+      if (code.length === 4) {
+        fetchClip(code);
+      }
+    }
+
+    document.getElementById('fetchClipBtn').addEventListener('click', () => {
+      const code = getEnteredPin();
+      if (code.length !== 4) {
+        showToast('Please enter a 4-digit numeric code', 'warn');
+        return;
+      }
+      fetchClip(code);
+    });
+
+    async function fetchClip(code) {
+      const fetchBtn = document.getElementById('fetchClipBtn');
+      fetchBtn.disabled = true;
+      fetchBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Retrieving...</span>`;
+      lucide.createIcons();
+
+      try {
+        let clipData = null;
+
+        if (supabaseClient) {
+          const now = new Date().toISOString();
+          const { data, error } = await supabaseClient
+            .from('clipboard')
+            .select('*')
+            .eq('code', code)
+            .gt('expires_at', now)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (error) throw error;
+          clipData = data;
+        } else {
+          clipData = getLocalDemoClip(code);
+        }
+
+        if (!clipData) {
+          showToast('Clip expired or does not exist', 'error');
+          document.getElementById('receivedContentCard').classList.add('hidden');
+          return;
+        }
+
+        displayReceivedClip(clipData);
+
+        // Burn on Read logic
+        if (clipData.burn_on_read) {
+          if (supabaseClient) {
+            // Delete DB row
+            await supabaseClient.from('clipboard').delete().eq('id', clipData.id);
+            // If file attached, delete from bucket
+            if (clipData.file_path) {
+              await supabaseClient.storage.from('temporary_clips').remove([clipData.file_path]);
+            }
+          } else {
+            removeLocalDemoClip(code);
+          }
+          document.getElementById('burnBadge').classList.remove('hidden');
+          showToast('🔥 Clip retrieved and permanently burned!', 'warn');
+        } else {
+          document.getElementById('burnBadge').classList.add('hidden');
+          showToast('Clip retrieved successfully!', 'success');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(`Failed: ${err.message || 'Error fetching clip'}`, 'error');
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.innerHTML = `<i data-lucide="search" class="w-5 h-5"></i><span>Retrieve Content</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    function displayReceivedClip(clip) {
+      const card = document.getElementById('receivedContentCard');
+      const typeBadge = document.getElementById('contentTypeBadge');
+      const textContainer = document.getElementById('receivedTextContainer');
+      const fileContainer = document.getElementById('receivedFileContainer');
+      const receivedText = document.getElementById('receivedText');
+      const imagePreview = document.getElementById('receivedImagePreview');
+      const imageElement = document.getElementById('imagePreviewElement');
+      const fileNameEl = document.getElementById('receivedFileName');
+      const fileSizeEl = document.getElementById('receivedFileSize');
+      const downloadBtn = document.getElementById('downloadFileBtn');
+
+      typeBadge.textContent = clip.type.toUpperCase();
+      document.getElementById('expiryDisplay').textContent = `Expires: ${new Date(clip.expires_at).toLocaleTimeString()}`;
+
+      if (clip.content) {
+        textContainer.classList.remove('hidden');
+        fileContainer.classList.add('hidden');
+        receivedText.textContent = clip.content;
+      } else {
+        textContainer.classList.add('hidden');
+        fileContainer.classList.remove('hidden');
+        fileNameEl.textContent = clip.file_name || 'Attached File';
+        fileSizeEl.textContent = clip.file_size ? formatBytes(clip.file_size) : '';
+
+        // Get public or signed URL from Supabase
+        let downloadUrl = '#';
+        if (supabaseClient && clip.file_path) {
+          const { data } = supabaseClient.storage.from('temporary_clips').getPublicUrl(clip.file_path);
+          downloadUrl = data?.publicUrl || '#';
+        }
+
+        downloadBtn.href = downloadUrl;
+
+        if (clip.type === 'image' && downloadUrl !== '#') {
+          imagePreview.classList.remove('hidden');
+          imageElement.src = downloadUrl;
+        } else {
+          imagePreview.classList.add('hidden');
+        }
+      }
+
+      card.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    document.getElementById('copyContentBtn').addEventListener('click', () => {
+      const text = document.getElementById('receivedText').textContent;
+      navigator.clipboard.writeText(text);
+      showToast('Copied to clipboard!', 'success');
+    });
+
+    // -------------------------------------------------------------
+    // URL Query Parameter Auto-Load (?code=XXXX)
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlCode = params.get('code');
+      if (urlCode && urlCode.length === 4) {
+        switchTab('receive');
+        for (let i = 0; i < 4; i++) {
+          pinInputs[i].value = urlCode[i];
+        }
+        fetchClip(urlCode);
+      }
+    });
+
+    // -------------------------------------------------------------
+    // Supabase Settings Modal
+    // -------------------------------------------------------------
+    const configModal = document.getElementById('configModal');
+    document.getElementById('configBtn').addEventListener('click', () => {
+      document.getElementById('supabaseUrlInput').value = localStorage.getItem('TEMP_CLIP_SUPABASE_URL') || '';
+      document.getElementById('supabaseKeyInput').value = localStorage.getItem('TEMP_CLIP_SUPABASE_KEY') || '';
+      configModal.classList.remove('hidden');
+    });
+    document.getElementById('closeConfigBtn').addEventListener('click', () => {
+      configModal.classList.add('hidden');
+    });
+    document.getElementById('saveConfigBtn').addEventListener('click', () => {
+      const url = document.getElementById('supabaseUrlInput').value.trim();
+      const key = document.getElementById('supabaseKeyInput').value.trim();
+      localStorage.setItem('TEMP_CLIP_SUPABASE_URL', url);
+      localStorage.setItem('TEMP_CLIP_SUPABASE_KEY', key);
+      DEFAULT_CONFIG.url = url;
+      DEFAULT_CONFIG.key = key;
+      initSupabase();
+      configModal.classList.add('hidden');
+      showToast('Supabase credentials updated!', 'success');
+    });
+
+    // Theme toggle
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+    });
+
+    // Local Demo Storage Helpers (fallback when no Supabase key provided)
+    function saveLocalDemoClip(clip) {
+      const clips = JSON.parse(localStorage.getItem('DEMO_CLIPS') || '{}');
+      clips[clip.code] = clip;
+      localStorage.setItem('DEMO_CLIPS', JSON.stringify(clips));
+    }
+    function getLocalDemoClip(code) {
+      const clips = JSON.parse(localStorage.getItem('DEMO_CLIPS') || '{}');
+      const clip = clips[code];
+      if (clip && new Date(clip.expires_at) > new Date()) {
+        return clip;
+      }
+      return null;
+    }
+    function removeLocalDemoClip(code) {
+      const clips = JSON.parse(localStorage.getItem('DEMO_CLIPS') || '{}');
+      delete clips[code];
+      localStorage.setItem('DEMO_CLIPS', JSON.stringify(clips));
+    }
+  </script>
+</body>
+</html>

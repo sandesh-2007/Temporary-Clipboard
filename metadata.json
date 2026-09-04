@@ -1,0 +1,6 @@
+{
+  "name": "Temporary Clipboard",
+  "description": "Temporary Online Clipboard with 4-digit PIN, QR code sharing, burn-on-read, and Supabase cloud storage.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

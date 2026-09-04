@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Clipboard Body -->
+    <path
+        android:pathData="M37,28 L71,28 C74.3,28 77,30.7 77,34 L77,80 C77,83.3 74.3,86 71,86 L37,86 C33.7,86 31,83.3 31,80 L31,34 C31,30.7 33.7,28 37,28 Z"
+        android:fillColor="#1E293B" />
+    
+    <!-- Clipboard Inner Plate -->
+    <path
+        android:pathData="M35,33 L73,33 C74.1,33 75,33.9 75,35 L75,78 C75,79.1 74.1,80 73,80 L35,80 C33.9,80 33,79.1 33,78 L33,35 C33,33.9 33.9,33 35,33 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="33"
+                android:endX="54"
+                android:endY="80"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#283548" />
+                <item android:offset="1.0" android:color="#1A2234" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Top Metal Clip -->
+    <path
+        android:pathData="M44,24 L64,24 C65.7,24 67,25.3 67,27 L67,31 C67,32.1 66.1,33 65,33 L43,33 C41.9,33 41,32.1 41,31 L41,27 C41,25.3 42.3,24 44,24 Z"
+        android:fillColor="#6366F1" />
+    <path
+        android:pathData="M49,27 L59,27"
+        android:strokeWidth="2"
+        android:strokeColor="#EEF2FF"
+        android:strokeLineCap="round" />
+
+    <!-- Transfer / Lightning Flame Symbol in Center -->
+    <path
+        android:pathData="M56,42 L46,55 L53,55 L51,68 L62,54 L55,54 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="46"
+                android:startY="42"
+                android:endX="62"
+                android:endY="68"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#10B981" />
+                <item android:offset="1.0" android:color="#06B6D4" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 4 Code Dots at bottom representing 4-digit PIN -->
+    <path
+        android:pathData="M41,74 A2,2 0 1,1 41,73.9 M49,74 A2,2 0 1,1 49,73.9 M59,74 A2,2 0 1,1 59,73.9 M67,74 A2,2 0 1,1 67,73.9"
+        android:strokeWidth="2.5"
+        android:strokeColor="#818CF8"
+        android:strokeLineCap="round" />
+</vector>
