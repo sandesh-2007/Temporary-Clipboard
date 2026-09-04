@@ -4,9 +4,16 @@ A modern, fast, and secure **Temporary Online Clipboard Website** for instantly 
 
 ---
 
-## 🌐 Live Website & Online Access
+## 🌐 Live Website
 
-This project is a high-performance **Web Application** that runs in any browser with zero installation needed.
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy)
+
+- **Live Preview URL**: [Temporary Clipboard Web](https://ais-dev-2csewbkym5azvcw2ji4ruj-806742738147.asia-southeast1.run.app)
+- **Netlify Deploy Ready**: Pre-configured with `netlify.toml` for automated continuous deployment.
+
+---
+
+## ✨ Features
 
 - **Transfer Text & Code**: Share notes, links, passwords, and tokens effortlessly.
 - **File & Photo Sharing**: Transfer attachments, pictures, and documents up to 20MB.
@@ -14,24 +21,26 @@ This project is a high-performance **Web Application** that runs in any browser 
 - **QR Code Scanning**: Point your phone camera at the screen to instantly load the clipboard data.
 - **Self-Destruct (Burn on Read)**: Permanent deletion right after the recipient retrieves it.
 - **10-Minute Expiry**: Auto-purged in 10 minutes to protect your sensitive data.
+- **Dark / Light Mode**: Modern glassmorphism design with responsive mobile UI.
 
 ---
 
-## 🚀 Instant Deployment (1-Click)
+## 🚀 Instant Netlify Deployment (Zero-Config)
 
-You can host and run this website for free on **GitHub Pages**, **Vercel**, or **Netlify**:
+### Method 1: Connect via GitHub (Automatic Updates)
+1. Login to **[Netlify](https://app.netlify.com)** using your GitHub account.
+2. Click **"Add new site"** > **"Import an existing project"**.
+3. Select **GitHub** and choose this repository.
+4. Netlify will automatically detect `netlify.toml` with:
+   - **Publish directory**: `.`
+   - **Build command**: `echo 'Static clipboard web app ready'`
+5. Click **"Deploy site"**.
+6. Netlify will give you a free live URL (e.g. `https://your-clipboard.netlify.app`)! Whenever you push code, Netlify will auto-deploy.
 
-### 1. GitHub Pages (Free & Automatic)
-1. Go to your repository on GitHub.
-2. Click on **Settings** > **Pages** (in the left sidebar).
-3. Under **Branch**, select `main` and root folder `/` (or `/public`).
-4. Click **Save**. Your website will be live at:
-   `https://<your-username>.github.io/<repo-name>/`
-
-### 2. Vercel / Netlify
-1. Go to [vercel.com](https://vercel.com) or [netlify.com](https://netlify.com).
-2. Import your GitHub repository.
-3. Deploy! Since it is standard HTML5/CSS/JS, it requires 0 build configuration.
+### Method 2: Netlify Drop (Instant Drag & Drop without linking)
+1. Go to **[Netlify Drop](https://app.netlify.com/drop)**.
+2. Drag and drop this folder (or download the ZIP and drag the folder containing `index.html`).
+3. Your site is live in 10 seconds!
 
 ---
 
@@ -50,14 +59,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 📱 Mobile Friendly & Android App
-
-- **Responsive Web App**: Works seamlessly on all mobile screens, iPhones, and Android browsers.
-- **Native Android App**: The project also includes a full native Jetpack Compose Android app in `/app` and pre-built APKs in the repository.
-
----
-
-## ☁️ Supabase Setup (Optional Cloud Storage)
+## ☁️ Supabase Setup (Optional Real-Time Cloud Storage)
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Execute the schema from [`supabase/schema.sql`](supabase/schema.sql) in your Supabase SQL editor.
