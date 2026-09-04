@@ -1,0 +1,20 @@
+{
+  "name": "temporary-clipboard-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fast, cross-device temporary online clipboard website",
+  "scripts": {
+    "start": "npx serve . -p 3000",
+    "build": "echo 'Static web client ready for deployment'"
+  },
+  "keywords": [
+    "clipboard",
+    "temporary-clipboard",
+    "file-sharing",
+    "p2p",
+    "text-transfer",
+    "supabase"
+  ],
+  "author": "Sandesh Vishwakarma",
+  "license": "MIT"
+}
